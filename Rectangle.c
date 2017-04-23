@@ -6,7 +6,7 @@
  ************************************************************************/
 #include<stdio.h>
 #include<stdlib.h>
-
+// New
 void Tra(int i, int j, int s[][7]);
 void Rec(int p[],int num);
 
