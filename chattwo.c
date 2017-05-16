@@ -14,14 +14,14 @@
 #include<sys/types.h>
 #include<netinet/in.h>
 #include<sys/socket.h>
-#define PORT 4000
+#define PORT 4009
 #define MAXDATASIZE 100 
 
 int main(int argc,char *argv[])
 {
-    char myput[20] = {'\0'};
+    char myput[50] ={'\0'} ;
     int sockfd,numbytes;
-    char buf[MAXDATASIZE];
+    char buf[50];
     struct hostent *he;
     struct sockaddr_in their_addr;
 
@@ -48,22 +48,26 @@ int main(int argc,char *argv[])
     }
     while(1)
     {
-        if(!fork()){
-        numbytes=recv(sockfd,buf,MAXDATASIZE,0);
-        if(numbytes == -1)
+        int pid = fork();
+        if(pid != -1 && pid != 0)
         {
-            perror("recv");
-            exit(1);
+            numbytes=recv(sockfd,buf,MAXDATASIZE,0);
+            if(numbytes == -1)
+            {
+                perror("recv");
+                exit(1);
+            }
+            buf[numbytes] = '\0';
+            printf("Server:%s\n",buf);
         }
-        buf[numbytes] = '\0';
-        printf("Server:%s\n",buf);
-
-        scanf("%s",myput);
-        if(send(sockfd,myput,14,0) == -1)
+        if(pid == 0)
         {
-            perror("send");
+            scanf("%s",myput);
+            if(send(sockfd,myput,50,0) == -1)
+            {
+                perror("send");
+            }
         }
-    }
     }
     if(argc!=2)
     {

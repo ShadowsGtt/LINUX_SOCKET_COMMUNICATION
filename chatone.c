@@ -18,12 +18,12 @@
 
 /*服务器要监听的本地端口*/
 #define BACKLOG 10
-#define MYPORT 4000
+#define MYPORT 4009
 int main()
 {
     int numbytes;
-    char buf[100];
-    char myput[20] = {'\0'};
+    char buf[50];
+    char myput[50] = {'\0'};
     int sockfd,new_fd;
     struct sockaddr_in my_addr;
     struct sockaddr_in their_addr;
@@ -57,19 +57,24 @@ int main()
             continue;
         }
         printf("server:got connetion from %s\n",inet_ntoa(their_addr.sin_addr));
-        while(1){
-            if(!fork()){
+        while(1)
+        {
+            int pid = fork();
+            if(pid != -1 && pid != 0)
+            {
                 scanf("%s",myput);
-                if(send(new_fd,myput,14,0)==-1)
+                if(send(new_fd,myput,50,0)==-1)
                 {
                     perror("send");
                 }
+            }
+            if(pid == 0)
+            {
                 numbytes = recv(new_fd,buf,100,0);
                 buf[numbytes] = '\0';
                 printf("Client:%s\n",buf);
+            }
         }
-
-    }
     }
         while(waitpid(-1,NULL,WNOHANG)>0);
     return 0;
