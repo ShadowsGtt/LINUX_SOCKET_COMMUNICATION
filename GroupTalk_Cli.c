@@ -96,6 +96,7 @@ int main(int argc,char *argv[])
             {
                 perror("send");
             }
+		memset(myput,0,sizeof(myput));
         }
     }
     return 0;
