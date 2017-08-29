@@ -170,6 +170,7 @@ int main()
                         if(cli[k] != conn)
                         send(cli[k],buf,sizeof(buf),0);
                     }
+			memset(buf,0,sizeof(buf));
                 }
             }
         }
