@@ -34,7 +34,7 @@ int main()
     fgets(name,sizeof(name),stdin);
     name[strlen(name)-1] = '\0';
 
-    struct pollfd WRS[3];
+    struct pollfd WRS[2];
 
     if((he = gethostbyname(SerIP))==NULL)
     {
@@ -55,19 +55,23 @@ int main()
         perror("服务器未启动");
         exit(1);
     }
-    send(sockfd,name,sizeof(name),0);
-    WRS[0].fd = 0;  //输入;
+    WRS[0].fd = 0;  //终端;
+    WRS[0].events = POLLIN && POLLOUT;  //写事件
+
     WRS[1].fd = sockfd; //输出
-    WRS[0].events = POLLWRNORM;  //写事件
-    WRS[1].events = POLLRDNORM; // 读事件
+    WRS[1].events = POLLOUT && POLLIN; // 读事件
     printf("发送给指定人消息格式为:@[对方名字][:][消息内容]\n");
     while(1)
     {
         int nready = poll(WRS,2,0);
-        
-        if(WRS[1].revents & POLLRDNORM) //接受外来信息
+        if(nready == -1)
+        {
+            perror("error");
+        }
+        if(WRS[1].revents & (POLLOUT || POLLIN)) //接受外来信息
         {
             numbytes=recv(sockfd,buf,sizeof(buf),0);
+            buf[numbytes] = '\0';
             if(numbytes == -1)
             {
                 perror("recv");
@@ -81,12 +85,15 @@ int main()
             else
                 printf("%s",buf);
         }
-        if(WRS[0].revents & POLLWRNORM) //获取终端输入
+        if(WRS[0].revents & (POLLIN || POLLOUT)) //获取终端输入
         {
-            if(fgets(myput,sizeof(myput),stdin) == NULL)
+            if(fgets(newmyput,sizeof(newmyput),stdin) == NULL)
             {
-                break;
+                continue; 
             }
+            strcat(myput,name);
+            strcat(myput,":");
+            strcat(myput,newmyput);
             if(send(sockfd,myput,sizeof(myput),0) == -1)
             {
                 perror("send");
