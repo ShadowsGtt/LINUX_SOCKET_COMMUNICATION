@@ -62,6 +62,10 @@ int Init()
     }  
     return sockfd;
 }
+void Devide_Msg(char *msg)
+{
+    
+}
 
 int main()
 {
@@ -80,12 +84,13 @@ int main()
     for(i = 1; i < MaxClients ; i++)
     {
         Poll_Cli[i].fd = -1;
+        Poll_Cli[i].events = POLLIN &&  POLLOUT;
 
     }
     int maxi = 0;
     while(1)
     {
-        int nready = poll(Poll_Cli,maxi+1,0);
+        int nready = poll(Poll_Cli,maxi+1,-1);
         if (Poll_Cli[0].revents & POLLRDNORM)  /* 新的连接到来 */
         {
             int sin_size = sizeof(struct sockaddr_in);
@@ -94,8 +99,6 @@ int main()
                 perror("accept");
                 continue;
             }
-            recv(conn,name,sizeof(name),0);
-            send(conn,"登录成功!\n",50,0);
             printf("新客户%s已经链接！IP:%s,Port:%d\n",name,inet_ntoa(their_addr.sin_addr),ntohs(their_addr.sin_port));
             printf("当前在线人数:%d\n",++total);
             maxi++;
@@ -104,9 +107,7 @@ int main()
                 if(Poll_Cli[k].fd == -1)
                 {
                     Poll_Cli[k].fd = conn;
-                    strcpy(clients[k].name,name);
                     clients[k].fd = conn;
-                    Poll_Cli[k].events = POLLRDNORM;
                     break;
                 }
             }
@@ -115,23 +116,28 @@ int main()
         {
             conn = Poll_Cli[k].fd;
             if(conn == -1)
-                return(0) ;
-            if (Poll_Cli[k].revents & POLLRDNORM)
+                continue;
+            if (Poll_Cli[k].revents & (POLLIN ||POLLOUT))
             {
                 numbytes = recv(conn,buf,sizeof(buf),0);
                 buf[numbytes] = '\0';
-                strcpy(name,clients[k].name); 
+                char name[20] = "\0";
                 char newbuf[200] = "\0";
                 char dname[20] = "\0";
                 char msg[300] = "\0";
-                int n = 0;
                 int m = 0;
-                if(buf[0] == '@')
+                int n = 0;
+                while(buf[m] != ':')
+                {
+                    name[m] = buf[m];  //name 存发消息客户端的名字
+                    m++;                                //gao:abcde
+                }
+                if(buf[m+1] == '@')
                 {
                     int i = 0;
-                    for(i = 1 ;buf[i] != ':';i++)
+                    for(i = m+2 ;buf[i] != ':';i++)
                     {
-                        dname[m++] = buf[i]; 
+                        dname[n++] = buf[i]; 
                     }
                     n = 0;
                     for(int p = i+1;buf[p] != '\0';p++)
@@ -142,11 +148,18 @@ int main()
                 else
                 {
                     n = 0;
-                    for(int i = 0;buf[i] != '\0';i++)
+                    for(int i = m+1;buf[i] != '\0';i++)
                     {
                         newbuf[n++] = buf[i];   //newbuf 存客户端发送的消息
                     }
                 }
+
+
+                if(clients[k].fd == conn)
+                {
+                    strcpy(clients[k].name,name);
+                }
+                
                 if(numbytes == -1)
                 {
                     perror("recieve");
@@ -162,14 +175,14 @@ int main()
                 }
                 else
                 {
-                   printf("name=%s\n",name);
+                    printf("name=%s\n",name);
                     printf("dname=%s\n",dname);
                     printf("msg=%s\n",newbuf);
                     strcat(msg,name);
                     strcat(msg,":");
                     strcat(msg,newbuf);
                     msg[strlen(msg)] = '\0';
-                   for(int k = 0 ; k < 50 ;k++)
+                    for(int k = 0 ; k < 50 ;k++)
                     {
                         if(strcmp(clients[k].name,dname) == 0)
                         {
