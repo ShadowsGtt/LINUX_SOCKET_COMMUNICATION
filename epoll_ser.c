@@ -96,7 +96,6 @@ int main()
     int sockfd = Init();
     setnonblocking(sockfd);
     int sin_size;
-    //char name[20] = "\0";
     buf[numbytes] = '\0';
     char name[20] = "\0";
     char newbuf[200] = "\0";
@@ -149,18 +148,12 @@ int main()
                     }
                 }
             }
-            else //if(Epoll_Cli[t].data.fd &EPOLLIN) 
+            else if(Epoll_Cli[t].events & EPOLLIN) 
             {
                 conn = Epoll_Cli[t].data.fd;
                 if(conn == -1)
                     continue;
                 numbytes = recv(conn,buf,sizeof(buf),0);
-                /*rgfd.data.fd = conn;
-                rgfd.events = EPOLLIN;
-                if(epoll_ctl(epollfd,EPOLL_CTL_MOD,conn,&rgfd) == -1) //将监听的fd注册到epoll中
-                {
-                    perror("register failed");
-                }*/
                 int m = 0;
                 int n = 0;
                 while(buf[m] != ':')
