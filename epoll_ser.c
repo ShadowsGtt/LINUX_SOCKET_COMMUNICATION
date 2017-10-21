@@ -63,9 +63,37 @@ int Init()
     }  
     return sockfd;
 }
-void Devide_Msg(char *msg)
+void Devide_Msg(char *buf,char *dname,char* newbuf,char *name)
 {
-    
+    int m = 0;
+    int n = 0;
+    while(buf[m] != ':')
+    {
+        name[m] = buf[m];  //name 存发消息客户端的名字
+        m++;                                //gao:abcde
+    }
+    if(buf[m+1] == '@')
+    {
+        int i = 0;
+        for(i = m+2 ;buf[i] != ':';i++)
+        {
+            dname[n++] = buf[i]; 
+        }
+        n = 0;
+        for(int p = i+1;buf[p] != '\0';p++)
+        {
+            newbuf[n++] = buf[p];   //newbuf 存客户端发送的消息
+        }
+    }
+    else
+    {
+        n = 0;
+        for(int i = m+1;buf[i] != '\0';i++)
+        {
+            newbuf[n++] = buf[i];   //newbuf 存客户端发送的消息
+        }
+    }
+
 }
 void setnonblocking(int sock)
 {
@@ -83,6 +111,22 @@ void setnonblocking(int sock)
         exit(1);
     }
 }
+int Get_sendfd(char *msg,char *name,char *newbuf,char *dname)
+{
+    int sendfd = -1;
+    if(strcmp(dname,"\0")!= 0)
+    {
+        for(int k = 0 ; k < 50 ;k++)
+        {
+            if(strcmp(clients[k].name,dname) == 0)
+            {
+                sendfd = clients[k].fd;
+                break;
+            }
+        }
+    }
+    return sendfd;
+}
 
 int main()
 {
@@ -94,21 +138,29 @@ int main()
     int new_fd;
     int conn = -1;
     int sockfd = Init();
-    setnonblocking(sockfd);
+    //setnonblocking(sockfd);
     int sin_size;
-    buf[numbytes] = '\0';
-    char name[20] = "\0";
-    char newbuf[200] = "\0";
-    char dname[20] = "\0";
-    char msg[300] = "\0";
+    int sendfd;
+    char name[20];
+    char newbuf[200] ;
+    char dname[20];
+    char msg[300];
+    char sendmsg[300];
+    memset(buf,0,sizeof(buf));
+    memset(name,0,sizeof(name));
+    memset(dname,0,sizeof(dname));
+    memset(newbuf,0,sizeof(newbuf));
+    memset(msg,0,sizeof(msg));
+    memset(sendmsg,0,sizeof(sendmsg));
     int epollfd = epoll_create(MaxClients);   //创建epoll文件描述符
     struct epoll_event rgfd; //用来注册新事件
     struct epoll_event Epoll_Cli[MaxClients]; //存放Epoll返回的可读写事件
     for(int i = 0;i <MaxClients;i++)
     {
         Epoll_Cli[i].data.fd = -1;
+        clients[i].fd = -1;
     }
-    
+
     rgfd.data.fd = sockfd;
     rgfd.events = EPOLLIN;
     if(epoll_ctl(epollfd,EPOLL_CTL_ADD,sockfd,&rgfd) == -1) //将监听的fd注册到epoll中
@@ -117,35 +169,36 @@ int main()
     }
     while(1)
     {
-        int rtnum = epoll_wait(epollfd,Epoll_Cli,MaxClients,0);
+        int rtnum = epoll_wait(epollfd,Epoll_Cli,MaxClients,-1);
         for(int t = 0;t < rtnum ; t++)
         {
 
-            if( (Epoll_Cli[t].data.fd == sockfd)\
-                    &&  (sockfd & EPOLLIN) )
+            if( (Epoll_Cli[t].data.fd == sockfd) && (Epoll_Cli[t].events & EPOLLIN) )
             {
-                sin_size = sizeof(struct sockaddr_in);
+                sin_size = sizeof(their_addr);
                 if(  (conn = (accept(sockfd,(struct sockaddr *)&their_addr,&sin_size)  )) == -1)
                 {
                     perror("accept");
                     continue;
                 }
+                for(int k = 0; k < MaxClients;k++)
+                {
+                    if(clients[k].fd == -1)
+                    {
+                        Epoll_Cli[k].data.fd = conn;
+                        clients[k].fd = conn;
+                        // printf("accept fd:%d\n",clients[k].fd);
+                        break;
+                    }
+                }
                 printf("新客户已经链接！IP:%s,Port:%d\n",inet_ntoa(their_addr.sin_addr),ntohs(their_addr.sin_port));
                 printf("当前在线人数:%d\n",++total);
-                printf("newconnfd:%d\n",conn);
+                //printf("newconnfd:%d\n",conn);
                 rgfd.data.fd = conn;
                 rgfd.events = EPOLLIN ;
                 if(epoll_ctl(epollfd,EPOLL_CTL_ADD,conn,&rgfd) == -1) //将新连接的fd注册到epoll中
                 {
                     perror("epoll_ctl");
-                }
-                for(int k = 0; k < MaxClients;k++)
-                {
-                    if(clients[k].fd == -1)
-                    {
-                        clients[k].fd = conn;
-                        break;
-                    }
                 }
             }
             else if(Epoll_Cli[t].events & EPOLLIN) 
@@ -154,39 +207,15 @@ int main()
                 if(conn == -1)
                     continue;
                 numbytes = recv(conn,buf,sizeof(buf),0);
-                int m = 0;
-                int n = 0;
-                while(buf[m] != ':')
+                Devide_Msg(buf,dname,newbuf,name);
+                for(int i = 0;i < MaxClients;i++)
                 {
-                    name[m] = buf[m];  //name 存发消息客户端的名字
-                    m++;                                //gao:abcde
-                }
-                if(buf[m+1] == '@')
-                {
-                    int i = 0;
-                    for(i = m+2 ;buf[i] != ':';i++)
+                    if(clients[i].fd == conn)
                     {
-                        dname[n++] = buf[i]; 
-                    }
-                    n = 0;
-                    for(int p = i+1;buf[p] != '\0';p++)
-                    {
-                        newbuf[n++] = buf[p];   //newbuf 存客户端发送的消息
+                        strcpy(clients[i].name,name);
+                        break;
                     }
                 }
-                else
-                {
-                    n = 0;
-                    for(int i = m+1;buf[i] != '\0';i++)
-                    {
-                        newbuf[n++] = buf[i];   //newbuf 存客户端发送的消息
-                    }
-                }
-                if(clients[t].fd == conn)
-                {
-                    strcpy(clients[t].name,name);
-                }
-                
                 if(numbytes == -1)
                 {
                     perror("recieve");
@@ -206,26 +235,26 @@ int main()
                     printf("name=%s\n",name);
                     printf("dname=%s\n",dname);
                     printf("msg=%s\n",newbuf);
-                    strcat(msg,name);
-                    strcat(msg,":");
-                    strcat(msg,newbuf);
-                    msg[strlen(msg)] = '\0';
-                    for(int k = 0 ; k < 50 ;k++)
+                    sendfd = Get_sendfd(msg,name,newbuf,dname);
+                    if(sendfd != -1)
                     {
-                        if(strcmp(clients[k].name,dname) == 0)
-                        {
-                            send(clients[k].fd,msg,sizeof(msg),0);
-                        }
+                        strcat(sendmsg,name);
+                        strcat(sendmsg,":");
+                        strcat(sendmsg,newbuf);
+                        msg[strlen(sendmsg)] = '\0';
+                        send(sendfd,sendmsg,sizeof(sendmsg),0);
                     }
                 }
-            memset(buf,0,sizeof(buf));
-            memset(name,0,sizeof(name));
-            memset(dname,0,sizeof(dname));
-            memset(newbuf,0,sizeof(newbuf));
-            memset(msg,0,sizeof(msg));
             }
         }
+        memset(buf,0,sizeof(buf));
+        memset(name,0,sizeof(name));
+        memset(dname,0,sizeof(dname));
+        memset(newbuf,0,sizeof(newbuf));
+        memset(msg,0,sizeof(msg));
+        memset(sendmsg,0,sizeof(sendmsg));
+
     }
-    
+
     return 0;
 }
