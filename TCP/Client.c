@@ -46,9 +46,10 @@ int main(int argc,char *argv[])
         perror("connet");
         exit(1);
     }
+    int pid = fork();
     while(1)
     {
-        int pid = fork();
+
         if(pid != -1 && pid != 0)
         {
             numbytes=recv(sockfd,buf,MAXDATASIZE,0);
