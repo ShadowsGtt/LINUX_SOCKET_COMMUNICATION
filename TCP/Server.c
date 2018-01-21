@@ -57,9 +57,10 @@ int main()
             continue;
         }
         printf("server:got connetion from %s\n",inet_ntoa(their_addr.sin_addr));
-        while(1)
+        int pid = fork();
+	while(1)
         {
-            int pid = fork();
+
             if(pid != -1 && pid != 0)
             {
                 scanf("%s",myput);
