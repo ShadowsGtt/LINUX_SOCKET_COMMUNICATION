@@ -25,21 +25,21 @@
 #define TCPSERV 3
 #define TCPCLIENT 4
 
-    struct sockaddr_in serv_addr;
-    struct sockaddr_in client_addr;
-
-int Socket(int type)
+struct sockaddr_in serv_addr;
+struct sockaddr_in client_addr;
+int Socket(int);
+int Socket(int type)   //创建套接字
 {
     const int on = 1;
     int sockfd;
+    bzero(&client_addr,sizeof(client_addr));
     bzero(&serv_addr,sizeof(serv_addr));
     serv_addr.sin_family = AF_INET;
     serv_addr.sin_port = htons(ServPort);
-    //inet_pton(AF_INET,ServIp,&serv_addr.sin_addr);
-    serv_addr.sin_addr.s_addr = inet_addr(ServIp);
+    inet_pton(AF_INET,ServIp,&serv_addr.sin_addr);
     switch(type)
     {
-        case UDPSERV:
+        case UDPSERV:    //udp服务器套接字
             if((sockfd = socket(AF_INET,SOCK_DGRAM,0))==-1)
             {
                 perror("socket");
@@ -49,27 +49,20 @@ int Socket(int type)
             {
                 perror("setsockopt");
             }
-            if(bind(sockfd,(struct sockaddr *)&serv_addr,sizeof(struct sockaddr)) == -1)
+            if(bind(sockfd,(struct sockaddr *)&serv_addr,sizeof(serv_addr)) == -1)
             {
                 perror("bind");
                 exit(1);
             }
             break;    
-        case UDPCLIENT:
+        case UDPCLIENT:  //udp客户端套接字
             if((sockfd = socket(AF_INET,SOCK_DGRAM,0))==-1)
             {
                 perror("socket");
                 exit(1);
             }
-            int res;
-            if( res = connect(sockfd,(struct sockaddr *)&serv_addr,sizeof(serv_addr)) == -1 )
-            {
-                perror("connect");
-                exit(-1);
-            }
-
             break;
-        case TCPSERV:
+        case TCPSERV: //tcp服务器套接字
             if((sockfd = socket(AF_INET,SOCK_STREAM,0))==-1)
             {
                 perror("socket");
@@ -91,17 +84,41 @@ int Socket(int type)
             }
             break;
 
-        case TCPCLIENT:
+        case TCPCLIENT: //tcp客户端套接字
             if((sockfd = socket(AF_INET,SOCK_STREAM,0))==-1)
             {
                 perror("socket");
                 exit(1);
             }
+            if(connect(sockfd,(struct sockaddr *)&serv_addr,sizeof(serv_addr)) == -1 )
+            {
+                perror("connect");
+                exit(-1);
+            }
 
             break;
         default:
-            return -1;
+            sockfd = -1;
     }
         return sockfd;
+}
+
+void Getsockname(int fd,struct sockaddr *psockaddr,socklen_t *len)
+{
+    
+}
+void open_noblock(int sockfd)
+{
+    int flags;
+    if( (flags = fcntl(fd,F_GETFL,0)) < 0)
+    {
+        perror("fcntl GETFL");
+    }
+    flags |= O_NONBLOCK;
+    if(fcntl(fd,F_SETFL,O_NONBLOCK) < 0)
+    {
+        perror("fcntl SETFL");
+    }
+
 }
 #endif
