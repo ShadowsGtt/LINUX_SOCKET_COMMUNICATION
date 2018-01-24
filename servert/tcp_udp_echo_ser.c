@@ -44,7 +44,7 @@ int main()
     fd_set rset;
     
     int new_fd;
-    int client_len;
+    int client_len = sizeof(struct sockaddr_in);
     int nready;
     int maxfd = tcpfd+1;
 
