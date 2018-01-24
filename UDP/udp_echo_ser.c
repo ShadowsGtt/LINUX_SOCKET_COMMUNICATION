@@ -1,4 +1,5 @@
 #include "gt.h"
+//#include <signal.h>
 int main()
 {
     int sockfd = Socket(UDPSERV);
@@ -8,7 +9,8 @@ int main()
         exit(-1);
     }
     char recvbuf[300] = "\0";
-    int client_len;
+    int client_len = sizeof(struct sockaddr_in);
+    //int client_len;
     while(1)
     {
         bzero(recvbuf,sizeof(recvbuf));
