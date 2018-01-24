@@ -1,9 +1,9 @@
 /* 设置当前进程为守护进程,第一个参数为程序名字(argv[0]),第二个是设施,成功返回0  */
-int set_daemon(const char* pname ,int facility); 
+int set_daemon(const char* pname ,int facility) 
 {
     pid_t pid;
 
-    pid = fork();                 /* 创建子进程 */
+    pid = fork();                   /* 创建子进程 */
     if(pid < 0)
     {
         fprintf(stderr,"error:fork failed!");
@@ -15,7 +15,7 @@ int set_daemon(const char* pname ,int facility);
     }
     if( setsid() < 0 )              /* 创建会话,此时子进程是该会话的头进程以及新进程组的进程组头进程,因此不在拥有控制终端 */
         return (-1);
-    Signal(SIGHUP,SOG_IGN);
+    signal(SIGHUP,SIG_IGN);
 
     pid = fork();                   /* 创建子进程的子进程 */
     if(pid < 0)
@@ -31,9 +31,9 @@ int set_daemon(const char* pname ,int facility);
         close(i);                   /* 我们猜测打开的文件描述符个数 <= 24  */
 
     /* 这时该进程没有打开的文件描述符 */
-    open("/dev/null",o_RDONLY);     /* 将0号文件描述符(标准输入)重定向到/dev/null */
-    open("/dev/null",o_RDWR);       /* 将1号文件描述符(标准输出)重定向到/dev/null */
-    open("/dev/null",o_RDWR);       /* 将2号文件描述符(标准错误)定向到/dev/null */
+    open("/dev/null",O_RDONLY);     /* 将0号文件描述符(标准输入)重定向到/dev/null */
+    open("/dev/null",O_RDWR);       /* 将1号文件描述符(标准输出)重定向到/dev/null */
+    open("/dev/null",O_RDWR);       /* 将2号文件描述符(标准错误)定向到/dev/null */
 
     openlog(pname,LOG_PID,facility);/* pname:进程名字  LOG_PID:指定将进程ID填写到每个日志消息中 */
                                     /*第三个参数:一般填0(使用默认值LOG_USER) */
@@ -53,5 +53,3 @@ int set_daemon(const char* pname ,int facility);
     /* 作用:防止因收到SIG_HUP信号被系统退出当前进程 */
     /* 当会话的头进程退出时会发送一个SIG_HUP信号,系统对收到该信号的进程的默认处理是退出该进程 */
 }
-
-#endif
