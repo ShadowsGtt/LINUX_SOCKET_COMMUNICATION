@@ -1,33 +1,33 @@
+
 #include "gt.h"
-/* 设置当前进程为守护进程,第一个参数为程序名字(argv[0]),第二个是设施,成功返回0  */
-int set_daemon(const char* pname ,int facility) 
+int set_daemon(const char* pname ,int facility) /* 设置当前进程为守护进程,第一个参数为程序名字(argv[0]),第二个是设施,成功返回0  */
 {
     pid_t pid;
 
-    pid = fork();                   /* 创建子进程 */
+    pid = fork();    /* 创建子进程 */
     if(pid < 0)
     {
         fprintf(stderr,"error:fork failed!");
         return (-1);
     }
-    if(pid > 0)                     /* 父进程退出,子进程继续运行 */
+    if(pid > 0)     /* 父进程退出,子进程继续运行 */
     {
         _exit(0);
     }
-    if( setsid() < 0 )              /* 创建会话,此时子进程是该会话的头进程以及新进程组的进程组头进程,因此不在拥有控制终端 */
+    if( setsid() < 0 )  /* 创建会话,此时子进程是该会话的头进程以及新进程组的进程组头进程,因此不在拥有控制终端 */
         return (-1);
     signal(SIGHUP,SIG_IGN);
 
-    pid = fork();                   /* 创建子进程的子进程 */
+    pid = fork();      /* 创建子进程的子进程 */
     if(pid < 0)
     {
         fprintf(stderr,"errno:fork failed!");
         return (-1);
     }
-    if(pid > 0)                     /* 子进程退出,子进程的子进程继续运行 */
+    if(pid > 0)         /* 子进程退出,子进程的子进程继续运行 */
         _exit(0);
 
-    chdir("/");                     /* 改变工作目录 */
+    chdir("/");         /* 改变工作目录 */
     for(int i = 0;i < 24; i++)      /* 关闭该进程所有打开的文件描述符(这些文件描述符其实都是继承而来) */
         close(i);                   /* 我们猜测打开的文件描述符个数 <= 24  */
 
@@ -38,6 +38,9 @@ int set_daemon(const char* pname ,int facility)
 
     openlog(pname,LOG_PID,facility);/* pname:进程名字  LOG_PID:指定将进程ID填写到每个日志消息中 */
                                     /*第三个参数:一般填0(使用默认值LOG_USER) */
+    
+    syslog(LOG_INFO, "pid=%d daemon was started", getpid());
+    closelog();
     return 0; 
 
 
