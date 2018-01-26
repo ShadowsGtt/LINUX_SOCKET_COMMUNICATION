@@ -1,3 +1,4 @@
+#include "gt.h"
 /* 设置当前进程为守护进程,第一个参数为程序名字(argv[0]),第二个是设施,成功返回0  */
 int set_daemon(const char* pname ,int facility) 
 {
